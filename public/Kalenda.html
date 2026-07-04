@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UWAT | Kalenda ya Shughuli</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ══════════════════════════════════════
+           CSS VARIABLES & RESET
+        ══════════════════════════════════════ */
+        :root {
+            --forest:  #0D2B1A;
+            --canopy:  #1A4731;
+            --leaf:    #2D7A4F;
+            --mint:    #4CAF82;
+            --gold:    #D4A843;
+            --amber:   #F0C060;
+            --earth:   #8B5E3C;
+            --cream:   #FDFBF6;
+            --light:   #F2F4F0;
+            --dark:    #0A0A0A;
+            --mid:     #555;
+            --border:  rgba(45,122,79,0.13);
+            --ease:    cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior:smooth; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--dark);
+            overflow-x: hidden;
+            padding-top: 72px; /* offset for fixed nav */
+        }
+
+        /* ══════════════════════════════════════
+           NAVIGATION  — identical to main site
+        ══════════════════════════════════════ */
+        nav {
+            position: fixed; top: 0; width: 100%;
+            background: rgba(13,43,26,0.96);
+            backdrop-filter: blur(24px);
+            padding: 0 6%;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 72px;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(76,175,130,0.2);
+        }
+
+        /* Logo */
+        .nav-logo-wrap {
+            display: flex; align-items: center; gap: 12px;
+            text-decoration: none; flex-shrink: 0;
+        }
+        .nav-logo-img {
+            height: 48px; width: 48px;
+            object-fit: contain; border-radius: 8px;
+            background: rgba(212,168,67,0.15);
+        }
+        .nav-logo-text-wrap { display:flex; flex-direction:column; line-height:1; }
+        .nav-logo-name {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900; font-size: 1.6rem;
+            color: var(--amber); letter-spacing: -0.5px;
+        }
+        .nav-logo-sub {
+            font-size: 0.58rem; font-weight: 500;
+            color: rgba(76,175,130,0.85);
+            letter-spacing: 0.12em; text-transform: uppercase;
+            margin-top: 2px;
+        }
+        .logo-dot {
+            width: 7px; height: 7px;
+            background: var(--mint); border-radius: 50%;
+            display: inline-block; margin-left: 5px; vertical-align: middle;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.6);opacity:0.5} }
+
+        /* Nav links */
+        .nav-links { display:flex; list-style:none; gap:6px; }
+        .nav-links li a {
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            font-weight: 500; font-size: 0.88rem;
+            padding: 8px 14px; border-radius: 100px;
+            transition: all 0.3s var(--ease); letter-spacing: 0.02em;
+        }
+        .nav-links li a:hover,
+        .nav-links li a.nav-active {
+            color: var(--amber); background: rgba(212,168,67,0.12);
+        }
+        .nav-links li a.nav-active { font-weight: 700; }
+
+        /* Join button */
+        .btn-join {
+            background: linear-gradient(135deg, var(--gold), var(--amber));
+            color: var(--forest); padding: 11px 24px;
+            border-radius: 100px; border: none;
+            font-weight: 700; font-size: 0.88rem;
+            cursor: pointer; white-space: nowrap;
+            transition: all 0.3s var(--ease);
+            box-shadow: 0 4px 20px rgba(212,168,67,0.3);
+        }
+        .btn-join:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 30px rgba(212,168,67,0.45); }
+
+        /* ── Hamburger ── */
+        .hamburger {
+            display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px; cursor: pointer; gap: 5px;
+            transition: background 0.3s; flex-shrink: 0;
+        }
+        .hamburger:hover { background: rgba(76,175,130,0.2); }
+        .hamburger span {
+            display: block; width: 20px; height: 2px;
+            background: var(--amber); border-radius: 2px;
+            transition: all 0.35s var(--ease); transform-origin: center;
+        }
+        .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity:0; transform: scaleX(0); }
+        .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        /* ── Mobile menu ── */
+        .mobile-menu {
+            display: none; position: fixed;
+            top: 72px; left: 0; right: 0;
+            background: rgba(13,43,26,0.97);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(76,175,130,0.25);
+            z-index: 999; padding: 12px 6% 20px;
+            flex-direction: column; gap: 4px;
+            transform: translateY(-20px); opacity: 0;
+            transition: all 0.4s var(--ease);
+        }
+        .mobile-menu.open { transform: translateY(0); opacity: 1; }
+        .mobile-menu a {
+            display: flex; align-items: center; gap: 14px;
+            color: rgba(255,255,255,0.75); text-decoration: none;
+            font-weight: 600; font-size: 1rem;
+            padding: 14px 18px; border-radius: 14px;
+            transition: all 0.25s var(--ease); border: 1px solid transparent;
+        }
+        .mobile-menu a:hover,
+        .mobile-menu a.mob-active {
+            background: rgba(76,175,130,0.12);
+            border-color: rgba(76,175,130,0.25); color: var(--amber);
+        }
+        .mob-icon {
+            width:36px; height:36px; background:rgba(255,255,255,0.06);
+            border-radius:10px; display:flex; align-items:center; justify-content:center;
+            font-size:0.9rem; color:var(--mint); flex-shrink:0; transition:background 0.25s;
+        }
+        .mobile-menu a:hover .mob-icon,
+        .mobile-menu a.mob-active .mob-icon { background:rgba(212,168,67,0.2); color:var(--amber); }
+        .mob-label { flex:1; }
+        .mob-arrow { font-size:0.75rem; color:rgba(255,255,255,0.3); transition:transform 0.25s,color 0.25s; }
+        .mobile-menu a:hover .mob-arrow { transform:translateX(4px); color:var(--amber); }
+        .mob-divider { height:1px; background:rgba(255,255,255,0.07); margin:8px 0; }
+        .mob-join-btn {
+            background: linear-gradient(135deg,var(--gold),var(--amber)) !important;
+            color: var(--forest) !important; font-weight: 700 !important;
+            border-color: transparent !important; margin-top: 4px;
+            justify-content: center;
+        }
+
+        @media (max-width:900px) {
+            .hamburger  { display:flex; }
+            .btn-join   { display:none; }
+            .nav-links  { display:none; }
+            .mobile-menu{ display:flex; }
+        }
+
+        /* ══════════════════════════════════════
+           PAGE ENTRY ANIMATION
+        ══════════════════════════════════════ */
+        .page-wrap {
+            animation: pageIn 0.6s var(--ease) both;
+        }
+        @keyframes pageIn { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ══════════════════════════════════════
+           CALENDAR  —  BANNER
+        ══════════════════════════════════════ */
+        .cal-banner {
+            background: var(--forest);
+            position: relative; overflow: hidden;
+            padding: 58px 6% 48px;
+        }
+        /* Radial glow */
+        .cal-banner::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 80% 50%, rgba(76,175,130,0.18) 0%, transparent 62%);
+            pointer-events: none;
+        }
+        /* Watermark word */
+        .cal-banner::after {
+            content: 'KALENDA';
+            position: absolute; right: 4%; top: 50%;
+            transform: translateY(-50%);
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(70px, 11vw, 150px);
+            font-weight: 900; letter-spacing: -4px; line-height: 1;
+            color: rgba(255,255,255,0.028);
+            pointer-events: none; user-select: none;
+        }
+
+        .cal-banner-inner {
+            position: relative; z-index: 1;
+            max-width: 1300px; margin: 0 auto;
+        }
+        .cal-banner-kicker {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.68rem; letter-spacing: 0.25em;
+            text-transform: uppercase; color: var(--mint);
+            margin-bottom: 12px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .cal-banner-kicker::before { content:''; width:32px; height:1px; background:var(--mint); }
+        .cal-banner-h {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.2rem, 4.5vw, 4rem);
+            font-weight: 900; color: white;
+            letter-spacing: -2px; line-height: 1; margin-bottom: 12px;
+        }
+        .cal-banner-h span { color: var(--amber); }
+        .cal-banner-sub {
+            color: rgba(255,255,255,0.5); font-size: 0.92rem;
+            max-width: 500px; line-height: 1.65;
+        }
+
+        /* Legend bar */
+        .cal-legend-bar {
+            background: rgba(255,255,255,0.055);
+            border: 1px solid rgba(76,175,130,0.18);
+            border-radius: 12px; margin-top: 28px;
+            padding: 14px 24px;
+            display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+            position: relative; z-index: 1;
+        }
+        .leg-label {
+            font-family: 'Space Mono', monospace; font-size: 0.58rem;
+            letter-spacing: 0.15em; color: rgba(255,255,255,0.3);
+            text-transform: uppercase; margin-right: 2px;
+        }
+        .leg-item { display:flex; align-items:center; gap:7px; font-size:0.78rem; color:rgba(255,255,255,0.6); }
+        .leg-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .leg-dot.green { background:var(--mint); }
+        .leg-dot.gold  { background:var(--gold); }
+        .leg-dot.blue  { background:#60A5FA; }
+
+        /* ══════════════════════════════════════
+           CALENDAR  —  MAIN BODY
+        ══════════════════════════════════════ */
+        .cal-body {
+            max-width: 1300px; margin: 0 auto;
+            padding: 42px 6% 70px;
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 36px;
+            align-items: start;
+        }
+
+        /* ────────────────────────────────────
+           LEFT — Calendar Card
+        ──────────────────────────────────── */
+        .cal-card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 48px rgba(13,43,26,0.1);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            position: sticky; top: 90px;
+        }
+
+        /* Header: month name + nav */
+        .cal-card-header {
+            background: var(--forest);
+            padding: 24px 28px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .cal-month-name-big {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem; font-weight: 900;
+            color: white; letter-spacing: -0.5px; line-height: 1;
+        }
+        .cal-year-tag {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.63rem; color: var(--mint);
+            letter-spacing: 0.15em; margin-top: 5px;
+        }
+        .cal-nav-group { display:flex; gap:8px; }
+        .cal-nav-btn {
+            width: 36px; height: 36px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: white; font-size: 0.8rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .cal-nav-btn:hover { background:var(--gold); color:var(--forest); border-color:var(--gold); }
+        .cal-nav-btn.today-btn {
+            width: auto; padding: 0 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.56rem; letter-spacing: 0.1em;
+        }
+
+        /* Weekday row */
+        .cal-weekday-row {
+            display: grid; grid-template-columns: repeat(7,1fr);
+            padding: 14px 14px 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .cal-wd-head {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.58rem; letter-spacing: 0.08em;
+            color: var(--leaf); text-align: center;
+            text-transform: uppercase; padding: 4px 0;
+        }
+
+        /* Days grid */
+        .cal-days-grid {
+            display: grid; grid-template-columns: repeat(7,1fr);
+            gap: 3px; padding: 10px 12px 16px;
+        }
+        .cal-day-cell {
+            position: relative; aspect-ratio: 1;
+            border-radius: 11px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.18s var(--ease);
+            border: 1.5px solid transparent;
+            user-select: none;
+        }
+        .cal-day-cell:hover:not(.empty):not(.other-month) {
+            background: rgba(45,122,79,0.07);
+            border-color: rgba(45,122,79,0.22);
+        }
+        .cal-day-cell.empty { pointer-events:none; }
+        .cal-day-cell.other-month { opacity:0.2; pointer-events:none; }
+
+        /* Today */
+        .cal-day-cell.is-today {
+            background: var(--forest);
+            border-color: var(--forest);
+        }
+        .cal-day-cell.is-today .day-num { color:white; font-weight:800; }
+
+        /* Selected */
+        .cal-day-cell.is-selected {
+            background: linear-gradient(135deg, var(--leaf), var(--mint));
+            border-color: transparent;
+            box-shadow: 0 4px 18px rgba(45,122,79,0.38);
+            transform: scale(1.07);
+            z-index: 2;
+        }
+        .cal-day-cell.is-selected .day-num { color:white; font-weight:800; }
+        .cal-day-cell.is-selected .day-dots .dot { background:rgba(255,255,255,0.85); }
+
+        /* Has events subtle bg */
+        .cal-day-cell.has-ev:not(.is-today):not(.is-selected) {
+            background: rgba(212,168,67,0.05);
+        }
+        .cal-day-cell.has-ev:not(.is-today):not(.is-selected):hover {
+            background: rgba(212,168,67,0.1);
+            border-color: rgba(212,168,67,0.32);
+        }
+
+        .day-num {
+            font-size: 0.86rem; font-weight: 600;
+            color: var(--dark); line-height: 1;
+        }
+        .day-dots {
+            display: flex; gap: 2px; margin-top: 4px;
+            justify-content: center; min-height: 6px;
+        }
+        .dot {
+            width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+        }
+        .dot.green { background:var(--mint); }
+        .dot.gold  { background:var(--gold); }
+        .dot.blue  { background:#60A5FA; }
+
+        /* Multi-event count badge */
+        .day-badge {
+            position: absolute; top: 3px; right: 4px;
+            background: var(--gold); color: var(--forest);
+            font-size: 0.46rem; font-weight: 800;
+            width: 13px; height: 13px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Space Mono', monospace;
+        }
+
+        /* Month stats footer */
+        .cal-card-footer {
+            background: var(--light);
+            border-top: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .cal-stat { text-align: center; }
+        .cal-stat-num {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem; font-weight: 900;
+            color: var(--forest); line-height: 1;
+        }
+        .cal-stat-lbl {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.58rem; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--mid); margin-top: 2px;
+        }
+        .cal-stat-div { width:1px; height:30px; background:var(--border); }
+
+        /* ────────────────────────────────────
+           RIGHT — Event Panel
+        ──────────────────────────────────── */
+        .cal-panel { min-height: 460px; }
+
+        /* ─ State: initial (nothing selected) */
+        .state-initial {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            min-height: 360px;
+            background: white; border-radius: 24px;
+            border: 1.5px dashed rgba(45,122,79,0.2);
+            text-align: center; padding: 48px 36px;
+            animation: fadeUp 0.38s var(--ease);
+        }
+        .state-initial-icon {
+            width: 80px; height: 80px; border-radius: 20px;
+            background: rgba(45,122,79,0.06);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; color: var(--leaf); margin: 0 auto 22px;
+        }
+        .state-initial h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem; font-weight: 800;
+            color: var(--forest); margin-bottom: 10px;
+        }
+        .state-initial p { font-size: 0.88rem; color: var(--mid); line-height: 1.7; max-width: 280px; }
+        .state-initial .hint {
+            margin-top: 16px; font-size: 0.78rem; color: var(--mint);
+            display: flex; align-items: center; gap: 6px; justify-content: center;
+        }
+
+        /* ─ State: selected date, no events */
+        .state-empty {
+            background: white; border-radius: 24px;
+            border: 1px solid var(--border);
+            padding: 52px 40px; text-align: center;
+            animation: fadeUp 0.35s var(--ease);
+        }
+        .state-empty .empty-icon { font-size:3rem; color:rgba(45,122,79,0.12); margin-bottom:16px; }
+        .state-empty h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem; color: var(--forest); margin-bottom: 8px;
+        }
+        .state-empty p { font-size: 0.85rem; color: var(--mid); line-height: 1.7; }
+        .state-empty .hint-dots {
+            margin-top: 16px; font-size: 0.78rem; color: var(--leaf);
+        }
+
+        /* ─ State: events found */
+        .state-events { animation: fadeUp 0.35s var(--ease); }
+
+        @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+        /* Date heading */
+        .panel-date-row {
+            display: flex; align-items: flex-end;
+            justify-content: space-between; gap: 12px;
+            margin-bottom: 24px; flex-wrap: wrap;
+        }
+        .panel-date-left { display:flex; align-items:flex-end; gap:12px; }
+        .panel-day-big {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.2rem; font-weight: 900;
+            color: var(--forest); line-height: 0.88; letter-spacing: -3px;
+        }
+        .panel-month-stack { display:flex; flex-direction:column; padding-bottom:5px; }
+        .panel-month-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem; font-weight: 700; color: var(--forest);
+        }
+        .panel-year-tag {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.62rem; color: var(--leaf); letter-spacing: 0.15em;
+        }
+        .panel-count-pill {
+            background: var(--forest); color: var(--amber);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.1em; padding: 7px 16px;
+            border-radius: 100px; align-self: flex-start;
+        }
+
+        /* Event card */
+        .ev-card {
+            display: grid; grid-template-columns: 6px 1fr;
+            background: white; border-radius: 20px;
+            border: 1px solid var(--border);
+            overflow: hidden; margin-bottom: 14px;
+            transition: all 0.28s var(--ease);
+        }
+        .ev-card:last-child { margin-bottom: 0; }
+        .ev-card:hover {
+            box-shadow: 0 10px 32px rgba(13,43,26,0.1);
+            transform: translateY(-3px);
+            border-color: rgba(45,122,79,0.25);
+        }
+        .ev-stripe { }
+        .ev-stripe.green { background:var(--mint); }
+        .ev-stripe.gold  { background:var(--gold); }
+        .ev-stripe.blue  { background:#60A5FA; }
+
+        .ev-body { padding: 22px 22px 18px; }
+        .ev-top {
+            display: flex; align-items: flex-start;
+            justify-content: space-between; gap: 12px; margin-bottom: 13px;
+        }
+        .ev-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.12rem; font-weight: 800;
+            color: var(--forest); line-height: 1.2; flex:1;
+        }
+        .ev-status {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.58rem; font-weight: 700;
+            padding: 5px 12px; border-radius: 100px;
+            letter-spacing: 0.1em; white-space: nowrap; flex-shrink: 0;
+        }
+        .ev-status.s-open   { background:#ECFDF5; color:#065F46; }
+        .ev-status.s-muhimu { background:#FEF3C7; color:#92400E; }
+        .ev-status.s-soon   { background:#FFF7ED; color:#9A3412; }
+        .ev-status.s-online { background:#EFF6FF; color:#1E40AF; }
+
+        .ev-meta { display:flex; flex-wrap:wrap; gap:16px; }
+        .ev-meta-item {
+            display:flex; align-items:center; gap:6px;
+            font-size: 0.8rem; color: var(--mid);
+        }
+        .ev-meta-item i { color:var(--leaf); font-size:0.72rem; }
+
+        .ev-footer {
+            display:flex; align-items:center; justify-content:space-between;
+            margin-top: 14px; padding-top: 13px;
+            border-top: 1px solid var(--border);
+        }
+        .ev-audience {
+            display:flex; align-items:center; gap:6px;
+            font-size: 0.77rem; color: var(--leaf); font-weight: 600;
+        }
+        .ev-audience i { font-size:0.7rem; }
+        .ev-cat-pill {
+            font-size: 0.66rem; font-family: 'Space Mono', monospace;
+            padding: 4px 11px; border-radius: 100px; letter-spacing: 0.06em;
+        }
+        .ev-cat-pill.green { background:rgba(76,175,130,0.1); color:var(--leaf); }
+        .ev-cat-pill.gold  { background:rgba(212,168,67,0.12); color:var(--earth); }
+        .ev-cat-pill.blue  { background:rgba(96,165,250,0.1); color:#1E40AF; }
+
+        /* ──────────────────────────────────
+           UPCOMING EVENTS STRIP
+        ────────────────────────────────── */
+        .upcoming-wrap { margin-top: 32px; }
+        .upcoming-heading {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.62rem; letter-spacing: 0.2em;
+            text-transform: uppercase; color: var(--leaf);
+            margin-bottom: 14px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .upcoming-heading::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        .upcoming-row {
+            background: white; border-radius: 16px;
+            border: 1px solid var(--border);
+            display: flex; gap: 14px; align-items: center;
+            padding: 14px 16px; margin-bottom: 10px;
+            cursor: pointer; transition: all 0.25s var(--ease);
+        }
+        .upcoming-row:hover {
+            border-color: var(--leaf);
+            box-shadow: 0 5px 18px rgba(45,122,79,0.08);
+            transform: translateX(4px);
+        }
+        .up-chip {
+            min-width: 50px; height: 50px; border-radius: 12px;
+            background: var(--forest); flex-shrink: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .up-chip .uc-day {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem; font-weight: 900;
+            color: var(--amber); line-height: 1;
+        }
+        .up-chip .uc-mo {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.52rem; color: rgba(255,255,255,0.5);
+            letter-spacing: 0.07em; margin-top: 2px;
+        }
+        .up-info { flex:1; min-width:0; }
+        .up-title {
+            font-weight: 700; font-size: 0.88rem;
+            color: var(--forest); margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .up-loc { font-size: 0.73rem; color: var(--mid); }
+        .up-arrow { color: rgba(45,122,79,0.25); font-size: 0.72rem; flex-shrink:0; transition: all 0.2s; }
+        .upcoming-row:hover .up-arrow { color:var(--leaf); transform:translateX(3px); }
+
+        /* ══════════════════════════════════════
+           FOOTER  — lightweight
+        ══════════════════════════════════════ */
+        footer {
+            background: var(--dark); color: white;
+            padding: 36px 6%;
+        }
+        .footer-inner {
+            max-width: 1300px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 20px; flex-wrap: wrap;
+        }
+        .footer-logo-wrap { display:flex; align-items:center; gap:10px; }
+        .footer-logo-img { height:36px; width:36px; object-fit:contain; border-radius:6px; background:rgba(212,168,67,0.1); }
+        .footer-logo-name { font-family:'Playfair Display',serif; font-weight:900; font-size:1.35rem; color:var(--amber); }
+        .footer-copy { font-size: 0.78rem; color: rgba(255,255,255,0.28); }
+        .footer-links-row { display:flex; gap:20px; flex-wrap:wrap; }
+        .footer-links-row a {
+            font-size: 0.82rem; color: rgba(255,255,255,0.4);
+            text-decoration: none; transition: color 0.2s;
+        }
+        .footer-links-row a:hover { color: var(--mint); }
+        .footer-links-row a.f-active { color: var(--amber); font-weight: 600; }
+
+        /* ══════════════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════════════ */
+        @media (max-width: 1060px) {
+            .cal-body { grid-template-columns: 1fr; padding: 30px 5% 50px; }
+            .cal-card { position:static; }
+        }
+        @media (max-width: 640px) {
+            .cal-banner { padding: 40px 5% 34px; }
+            .cal-body { padding: 24px 4% 44px; gap: 22px; }
+            .cal-card-header { padding: 18px 18px 14px; }
+            .cal-weekday-row { padding: 10px 8px 6px; }
+            .cal-days-grid { padding: 8px 6px 14px; gap:2px; }
+            .cal-card-footer { padding: 12px 16px; }
+            .ev-body { padding: 16px 16px 14px; }
+            .panel-day-big { font-size: 2.4rem; }
+            .footer-inner { flex-direction:column; align-items:flex-start; gap:14px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     NAVIGATION  — same as main site
+     Links use href to navigate between pages
+══════════════════════════════════════ -->
+<nav>
+    <a class="nav-logo-wrap" href="index.html">
+        <img src="images/uwat logo.png" alt="UWAT Logo" class="nav-logo-img">
+        <div class="nav-logo-text-wrap">
+            <span class="nav-logo-name">UWAT <span class="logo-dot"></span></span>
+            <span class="nav-logo-sub">Umoja wa Wastaafu TANAPA</span>
+        </div>
+    </a>
+
+    <ul class="nav-links">
+        <li><a href="index.html">Mwanzo</a></li>
+        <li><a href="index.html#habari">Kuhusu</a></li>
+        <li><a href="index.html#uwekezaji">Uwekezaji</a></li>
+        <li><a href="index.html#maktaba">Maktaba</a></li>
+        <li><a href="kalenda.html" class="nav-active">Kalenda</a></li>
+    </ul>
+
+    <button class="btn-join" onclick="openJoinModal()">Jiunge Nasi &rarr;</button>
+
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()">
+        <span></span><span></span><span></span>
+    </div>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu">
+    <a href="index.html">
+        <span class="mob-icon"><i class="fas fa-home"></i></span>
+        <span class="mob-label">Mwanzo</span>
+        <span class="mob-arrow"><i class="fas fa-chevron-right"></i></span>
+    </a>
+    <a href="index.html#habari">
+        <span class="mob-icon"><i class="fas fa-info-circle"></i></span>
+        <span class="mob-label">Kuhusu</span>
+        <span class="mob-arrow"><i class="fas fa-chevron-right"></i></span>
+    </a>
+    <a href="index.html#uwekezaji">
+        <span class="mob-icon"><i class="fas fa-chart-line"></i></span>
+        <span class="mob-label">Uwekezaji</span>
+        <span class="mob-arrow"><i class="fas fa-chevron-right"></i></span>
+    </a>
+    <a href="index.html#maktaba">
+        <span class="mob-icon"><i class="fas fa-book"></i></span>
+        <span class="mob-label">Maktaba</span>
+        <span class="mob-arrow"><i class="fas fa-chevron-right"></i></span>
+    </a>
+    <a href="kalenda.html" class="mob-active">
+        <span class="mob-icon"><i class="fas fa-calendar-alt"></i></span>
+        <span class="mob-label">Kalenda</span>
+        <span class="mob-arrow"><i class="fas fa-chevron-right"></i></span>
+    </a>
+    <div class="mob-divider"></div>
+    <a class="mob-join-btn" onclick="openJoinModal()">
+        <span class="mob-icon" style="background:rgba(13,43,26,0.2);color:var(--forest)"><i class="fas fa-user-plus"></i></span>
+        <span class="mob-label">Jiunge Nasi</span>
+        <span class="mob-arrow" style="color:var(--forest)"><i class="fas fa-arrow-right"></i></span>
+    </a>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     CALENDAR PAGE CONTENT
+══════════════════════════════════════ -->
+<div class="page-wrap">
+
+    <!-- Banner -->
+    <div class="cal-banner">
+        <div class="cal-banner-inner">
+            <div class="cal-banner-kicker">Ratiba ya Shughuli</div>
+            <h1 class="cal-banner-h">Kalenda ya <span>UWAT</span></h1>
+            <p class="cal-banner-sub">
+                Chagua mwezi wowote kwa kutumia vitufe vya kushoto na kulia, kisha bonyeza tarehe
+                yoyote kuona matukio yake. Tarehe zenye dots za rangi zina shughuli maalum.
+            </p>
+            <!-- Legend -->
+            <div class="cal-legend-bar">
+                <span class="leg-label">Aina:</span>
+                <div class="leg-item"><div class="leg-dot green"></div> Mkutano / Kikao</div>
+                <div class="leg-item"><div class="leg-dot gold"></div> Tukio Kuu / Sherehe</div>
+                <div class="leg-item"><div class="leg-dot blue"></div> Online / Webinar</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main two-column layout -->
+    <div class="cal-body">
+
+        <!-- ── LEFT: Calendar Card ── -->
+        <div class="cal-card">
+            <!-- Header -->
+            <div class="cal-card-header">
+                <div>
+                    <div class="cal-month-name-big" id="calMonthName">Juni</div>
+                    <div class="cal-year-tag" id="calYearTag">2026</div>
+                </div>
+                <div class="cal-nav-group">
+                    <button class="cal-nav-btn" onclick="changeMonth(-1)" title="Mwezi uliopita">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="cal-nav-btn today-btn" onclick="goToToday()" title="Nenda leo">
+                        LEO
+                    </button>
+                    <button class="cal-nav-btn" onclick="changeMonth(1)" title="Mwezi ujao">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Weekday headers -->
+            <div class="cal-weekday-row">
+                <div class="cal-wd-head">Ju</div>
+                <div class="cal-wd-head">It</div>
+                <div class="cal-wd-head">Ju</div>
+                <div class="cal-wd-head">Al</div>
+                <div class="cal-wd-head">Ij</div>
+                <div class="cal-wd-head">Al</div>
+                <div class="cal-wd-head">Ju</div>
+            </div>
+
+            <!-- Day cells — rendered by JS -->
+            <div class="cal-days-grid" id="calDaysGrid"></div>
+
+            <!-- Stats footer -->
+            <div class="cal-card-footer">
+                <div class="cal-stat">
+                    <div class="cal-stat-num" id="statDays">—</div>
+                    <div class="cal-stat-lbl">Siku</div>
+                </div>
+                <div class="cal-stat-div"></div>
+                <div class="cal-stat">
+                    <div class="cal-stat-num" id="statEvents">—</div>
+                    <div class="cal-stat-lbl">Matukio</div>
+                </div>
+                <div class="cal-stat-div"></div>
+                <div class="cal-stat">
+                    <div class="cal-stat-num" id="statUpcoming">—</div>
+                    <div class="cal-stat-lbl">Yajayo</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT: Event Panel ── -->
+        <div class="cal-panel" id="calPanel">
+            <!-- Initial state — rendered by JS on load -->
+        </div>
+
+    </div><!-- /.cal-body -->
+
+</div><!-- /.page-wrap -->
+
+
+<!-- ── Footer ── -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-logo-wrap">
+            <img src="images/uwat logo.png" alt="UWAT" class="footer-logo-img">
+            <span class="footer-logo-name">UWAT</span>
+        </div>
+        <div class="footer-links-row">
+            <a href="index.html">Mwanzo</a>
+            <a href="index.html#habari">Kuhusu</a>
+            <a href="index.html#uwekezaji">Uwekezaji</a>
+            <a href="index.html#maktaba">Maktaba</a>
+            <a href="kalenda.html" class="f-active">Kalenda</a>
+        </div>
+        <div class="footer-copy">© 2025 UWAT — Umoja wa Wastaafu TANAPA</div>
+    </div>
+</footer>
+
+
+<!-- ══════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════ -->
+<script>
+/* ────────────────────────────────────────
+   EVENT DATA  —  Add / edit events here
+   type: 'green' | 'gold' | 'blue'
+   status: 'open' | 'muhimu' | 'soon' | 'online'
+──────────────────────────────────────── */
+const UWAT_EVENTS = [
+    {
+        year:2026, month:6, day:5,
+        title:'Kikao cha Kamati ya Uongozi',
+        location:'Makao Makuu ya UWAT, Arusha',
+        time:'9:00 – 16:00',
+        audience:'Kamati ya Uongozi',
+        type:'green', status:'open', category:'Kikao'
+    },
+    {
+        year:2026, month:6, day:6,
+        title:'Mkutano Mkuu wa Tano',
+        location:'Arusha International Conference Centre',
+        time:'8:00 – 17:00',
+        audience:'Wanachama Wote',
+        type:'gold', status:'muhimu', category:'Mkutano Mkuu'
+    },
+    {
+        year:2026, month:7, day:12,
+        title:'Semina ya Uwekezaji wa Kilimo',
+        location:'Hoteli ya Mount Meru, Arusha',
+        time:'9:00 – 15:00',
+        audience:'Wanachama',
+        type:'green', status:'open', category:'Mafunzo'
+    },
+    {
+        year:2026, month:8, day:10,
+        title:'Ziara ya Pamoja — Hifadhi ya Ruaha',
+        location:'Ruaha National Park',
+        time:'Siku Moja',
+        audience:'Nafasi 40 tu',
+        type:'gold', status:'soon', category:'Ziara'
+    },
+    {
+        year:2026, month:8, day:10,
+        title:'Kikao cha Usimamizi wa Fedha',
+        location:'Ofisi za UWAT, Arusha',
+        time:'14:00 – 16:00',
+        audience:'Kamati ya Fedha',
+        type:'green', status:'open', category:'Kikao'
+    },
+    {
+        year:2026, month:9, day:15,
+        title:'Webinar: Ushauri wa Uwekezaji',
+        location:'Online — Zoom',
+        time:'10:00 – 12:00',
+        audience:'Wanachama Wote',
+        type:'blue', status:'online', category:'Webinar'
+    },
+    {
+        year:2026, month:10, day:1,
+        title:'Siku ya Wastaafu Duniani',
+        location:'Mikoa yote Tanzania',
+        time:'Siku Nzima',
+        audience:'Wanachama Wote',
+        type:'gold', status:'muhimu', category:'Maadhimisho'
+    },
+    {
+        year:2026, month:10, day:15,
+        title:'Kikao cha Bodi — Robo ya Tatu',
+        location:'Makao Makuu ya UWAT',
+        time:'9:00 – 14:00',
+        audience:'Bodi ya Wadhamini',
+        type:'green', status:'open', category:'Bodi'
+    },
+    {
+        year:2026, month:11, day:20,
+        title:'Warsha ya Ujasiriamali kwa Wastaafu',
+        location:'Arusha, Mahali Patakapoamuliwa',
+        time:'9:00 – 16:00',
+        audience:'Wanachama',
+        type:'green', status:'open', category:'Warsha'
+    },
+    {
+        year:2026, month:12, day:20,
+        title:'Karamu ya Mwaka — Sherehe ya Wanachama',
+        location:'Arusha, Mahali Patakapoamuliwa',
+        time:'17:00 – Usiku',
+        audience:'Wanachama Wote',
+        type:'gold', status:'open', category:'Sherehe'
+    },
+];
+
+/* ─ Swahili month names ─ */
+const SW_MONTHS       = ['Januari','Februari','Machi','Aprili','Mei','Juni','Julai','Agosti','Septemba','Oktoba','Novemba','Desemba'];
+const SW_MONTHS_SHORT = ['JAN','FEB','MAC','APR','MEI','JUN','JUL','AGO','SEP','OKT','NOV','DES'];
+
+/* ─ State ─ */
+const TODAY    = new Date();
+let calYear    = TODAY.getFullYear();
+let calMonth   = TODAY.getMonth() + 1; // 1-indexed
+let selectedDay = null;
+
+/* ─ Data helpers ─ */
+function eventsForDay(y, m, d)  { return UWAT_EVENTS.filter(e => e.year===y && e.month===m && e.day===d); }
+function eventsForMonth(y, m)   { return UWAT_EVENTS.filter(e => e.year===y && e.month===m); }
+function upcomingEvents(n = 6) {
+    const base = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+    return UWAT_EVENTS
+        .filter(e => new Date(e.year, e.month-1, e.day) >= base)
+        .sort((a,b) => new Date(a.year,a.month-1,a.day) - new Date(b.year,b.month-1,b.day))
+        .slice(0, n);
+}
+
+function statusCfg(s) {
+    return ({
+        open:   { label:'WAZI',          cls:'s-open'   },
+        muhimu: { label:'MUHIMU',        cls:'s-muhimu' },
+        soon:   { label:'NAFASI CHACHE', cls:'s-soon'   },
+        online: { label:'ONLINE',        cls:'s-online' },
+    })[s] || { label: s.toUpperCase(), cls:'s-open' };
+}
+
+/* ════════════════════════════════════════
+   RENDER CALENDAR GRID
+════════════════════════════════════════ */
+function renderCalendar() {
+    document.getElementById('calMonthName').textContent = SW_MONTHS[calMonth - 1];
+    document.getElementById('calYearTag').textContent   = calYear;
+
+    const grid          = document.getElementById('calDaysGrid');
+    grid.innerHTML      = '';
+
+    const daysInMonth   = new Date(calYear, calMonth, 0).getDate();
+    const firstWeekday  = new Date(calYear, calMonth - 1, 1).getDay(); // 0=Sun
+    const offset        = (firstWeekday + 6) % 7; // shift to Mon=0
+
+    /* leading blanks */
+    for (let i = 0; i < offset; i++) {
+        const blank = document.createElement('div');
+        blank.className = 'cal-day-cell empty';
+        grid.appendChild(blank);
+    }
+
+    /* day cells */
+    for (let d = 1; d <= daysInMonth; d++) {
+        const evs        = eventsForDay(calYear, calMonth, d);
+        const isToday    = calYear === TODAY.getFullYear() && calMonth === TODAY.getMonth()+1 && d === TODAY.getDate();
+        const isSelected = selectedDay === d;
+
+        const cell = document.createElement('div');
+        let cls = 'cal-day-cell';
+        if (isToday)    cls += ' is-today';
+        if (isSelected) cls += ' is-selected';
+        if (evs.length) cls += ' has-ev';
+        cell.className = cls;
+
+        /* day number */
+        const numEl = document.createElement('span');
+        numEl.className = 'day-num';
+        numEl.textContent = d;
+        cell.appendChild(numEl);
+
+        /* dots row */
+        if (evs.length) {
+            const dotsWrap = document.createElement('div');
+            dotsWrap.className = 'day-dots';
+            evs.slice(0, 3).forEach(ev => {
+                const dot = document.createElement('div');
+                dot.className = `dot ${ev.type}`;
+                dotsWrap.appendChild(dot);
+            });
+            cell.appendChild(dotsWrap);
+
+            /* multi-event badge */
+            if (evs.length > 1) {
+                const badge = document.createElement('div');
+                badge.className = 'day-badge';
+                badge.textContent = evs.length;
+                cell.appendChild(badge);
+            }
+        }
+
+        cell.addEventListener('click', () => selectDay(d));
+        grid.appendChild(cell);
+    }
+
+    /* stats footer */
+    const monthEvs = eventsForMonth(calYear, calMonth);
+    document.getElementById('statDays').textContent     = daysInMonth;
+    document.getElementById('statEvents').textContent   = monthEvs.length;
+    document.getElementById('statUpcoming').textContent = upcomingEvents(99).length;
+
+    /* re-render panel if day already selected */
+    if (selectedDay) renderPanel(selectedDay);
+}
+
+/* ════════════════════════════════════════
+   SELECT A DAY
+════════════════════════════════════════ */
+function selectDay(d) {
+    selectedDay = d;
+    renderCalendar();
+    renderPanel(d);
+}
+
+/* ════════════════════════════════════════
+   RENDER RIGHT PANEL
+════════════════════════════════════════ */
+function renderPanel(d) {
+    const evs   = eventsForDay(calYear, calMonth, d);
+    const panel = document.getElementById('calPanel');
+
+    /* ── No events on this date ── */
+    if (!evs.length) {
+        panel.innerHTML = `
+        <div class="state-empty">
+            <div class="empty-icon"><i class="far fa-calendar-times"></i></div>
+            <h3>${d} ${SW_MONTHS[calMonth-1]} ${calYear}</h3>
+            <p>Hakuna matukio yaliyopangwa kwa tarehe hii.</p>
+            <p class="hint-dots" style="margin-top:12px;">
+                <i class="fas fa-info-circle" style="margin-right:5px;"></i>
+                Angalia tarehe nyingine zenye dots za rangi kwenye kalenda.
+            </p>
+        </div>
+        ${buildUpcomingSection()}`;
+        return;
+    }
+
+    /* ── Has events ── */
+    const cards = evs.map(ev => {
+        const st = statusCfg(ev.status);
+        return `
+        <div class="ev-card">
+            <div class="ev-stripe ${ev.type}"></div>
+            <div class="ev-body">
+                <div class="ev-top">
+                    <div class="ev-title">${ev.title}</div>
+                    <span class="ev-status ${st.cls}">${st.label}</span>
+                </div>
+                <div class="ev-meta">
+                    <div class="ev-meta-item"><i class="fas fa-map-marker-alt"></i>${ev.location}</div>
+                    <div class="ev-meta-item"><i class="fas fa-clock"></i>${ev.time}</div>
+                </div>
+                <div class="ev-footer">
+                    <div class="ev-audience"><i class="fas fa-users"></i>${ev.audience}</div>
+                    <span class="ev-cat-pill ${ev.type}">${ev.category}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    const plural = evs.length > 1 ? 'S' : '';
+    panel.innerHTML = `
+    <div class="state-events">
+        <div class="panel-date-row">
+            <div class="panel-date-left">
+                <div class="panel-day-big">${d}</div>
+                <div class="panel-month-stack">
+                    <div class="panel-month-name">${SW_MONTHS[calMonth-1]}</div>
+                    <div class="panel-year-tag">${calYear}</div>
+                </div>
+            </div>
+            <div class="panel-count-pill">${evs.length} TUKIO${plural.toLowerCase()}</div>
+        </div>
+        ${cards}
+    </div>
+    ${buildUpcomingSection()}`;
+}
+
+/* ── Build upcoming events HTML ── */
+function buildUpcomingSection() {
+    const upcoming = upcomingEvents(5);
+    if (!upcoming.length) return '';
+
+    const rows = upcoming.map(ev => `
+    <div class="upcoming-row" onclick="navToEvent(${ev.year},${ev.month},${ev.day})">
+        <div class="up-chip">
+            <div class="uc-day">${ev.day}</div>
+            <div class="uc-mo">${SW_MONTHS_SHORT[ev.month-1]}</div>
+        </div>
+        <div class="up-info">
+            <div class="up-title">${ev.title}</div>
+            <div class="up-loc"><i class="fas fa-map-marker-alt" style="color:var(--mint);font-size:0.65rem;margin-right:4px;"></i>${ev.location}</div>
+        </div>
+        <div class="up-arrow"><i class="fas fa-chevron-right"></i></div>
+    </div>`).join('');
+
+    return `
+    <div class="upcoming-wrap">
+        <div class="upcoming-heading">Matukio Yanayokuja</div>
+        ${rows}
+    </div>`;
+}
+
+/* ── Navigate to an event date (click from upcoming) ── */
+function navToEvent(y, m, d) {
+    calYear  = y;
+    calMonth = m;
+    selectDay(d);
+    /* smooth scroll to top of page on mobile */
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ════════════════════════════════════════
+   CALENDAR CONTROLS
+════════════════════════════════════════ */
+function changeMonth(dir) {
+    calMonth += dir;
+    if (calMonth > 12) { calMonth = 1; calYear++; }
+    if (calMonth < 1)  { calMonth = 12; calYear--; }
+    selectedDay = null;
+
+    /* reset panel to initial state */
+    document.getElementById('calPanel').innerHTML = buildInitialState();
+    renderCalendar();
+}
+
+function goToToday() {
+    calYear  = TODAY.getFullYear();
+    calMonth = TODAY.getMonth() + 1;
+    selectDay(TODAY.getDate());
+}
+
+function buildInitialState() {
+    return `
+    <div class="state-initial">
+        <div class="state-initial-icon"><i class="far fa-calendar-alt"></i></div>
+        <h3>Chagua Tarehe</h3>
+        <p>Bonyeza tarehe yoyote kwenye kalenda upande wa kushoto kuona matukio ya siku hiyo.</p>
+        <div class="hint">
+            <i class="fas fa-circle-info"></i>
+            Tarehe zenye dots za rangi zina matukio.
+        </div>
+    </div>
+    ${buildUpcomingSection()}`;
+}
+
+/* ════════════════════════════════════════
+   MOBILE MENU TOGGLE
+════════════════════════════════════════ */
+function toggleMenu() {
+    document.getElementById('mobileMenu').classList.toggle('open');
+    document.getElementById('hamburger').classList.toggle('open');
+}
+/* Close menu if clicking outside */
+document.addEventListener('click', e => {
+    const menu   = document.getElementById('mobileMenu');
+    const burger = document.getElementById('hamburger');
+    if (menu.classList.contains('open') && !menu.contains(e.target) && !burger.contains(e.target)) {
+        menu.classList.remove('open');
+        burger.classList.remove('open');
+    }
+});
+
+/* ── Redirect join button to main site ── */
+function openJoinModal() {
+    window.location.href = 'uwat_website_v3.html#jiunge';
+}
+
+/* ════════════════════════════════════════
+   INITIALISE
+════════════════════════════════════════ */
+document.getElementById('calPanel').innerHTML = buildInitialState();
+renderCalendar();
+</script>
+
+</body>
+</html>
