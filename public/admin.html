@@ -68,9 +68,11 @@
   .b-rejected { background: #FBEAE7; color: var(--red); }
   .b-super { background: var(--gold); color: var(--forest-dark); }
   .row-actions { display: flex; gap: 0.35rem; }
-  .icon-btn { border: none; border-radius: 7px; width: 30px; height: 30px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
-  .a-approve { background: #E3F4EA; } .a-reject { background: #FEF5DD; } .a-delete { background: #FBEAE7; }
-  .icon-btn:hover { filter: brightness(0.93); }
+  .act-btn { border: none; border-radius: 7px; padding: 0.42rem 0.75rem; cursor: pointer; font-size: 0.76rem; font-weight: 700; font-family: inherit; white-space: nowrap; }
+  .a-approve { background: #E3F4EA; color: var(--green); }
+  .a-reject { background: #FEF5DD; color: #94700e; }
+  .a-delete { background: #FBEAE7; color: var(--red); }
+  .act-btn:hover { filter: brightness(0.93); }
   .empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
 
   .panel { max-width: 1200px; margin: 1rem auto; padding: 0 1.5rem; }
@@ -165,7 +167,7 @@
       <table class="clickable">
         <thead>
           <tr>
-            <th>#</th><th>Jina Kamili</th><th>Jinsia</th><th>Simu</th><th>Mkoa</th>
+            <th style="text-transform:none;">Na.</th><th>Jina Kamili</th><th>Jinsia</th><th>Simu</th><th>Mkoa</th>
             <th>Hifadhi</th><th>Kustaafu</th><th>Tarehe ya Ombi</th><th>Hali</th><th>Vitendo</th>
           </tr>
         </thead>
@@ -191,7 +193,7 @@
         <h3>👥 Wasimamizi Waliopo</h3>
         <div class="table-wrap" style="padding:0;margin:0;">
           <table>
-            <thead><tr><th>#</th><th>Jina la Mtumiaji</th><th>Ameongezwa</th><th>Vitendo</th></tr></thead>
+            <thead><tr><th style="text-transform:none;">Na.</th><th>Jina la Mtumiaji</th><th>Ameongezwa</th><th>Vitendo</th></tr></thead>
             <tbody id="adminsBody"></tbody>
           </table>
           <div class="empty" id="adminsEmpty" style="display:none;">Bado hakuna wasimamizi. Waongeze hapo juu.</div>
@@ -350,9 +352,9 @@ function render() {
       <td>${badge(r.status)}</td>
       <td onclick="event.stopPropagation()">
         <div class="row-actions">
-          <button class="icon-btn a-approve" title="Kubali" onclick="setStatus(${r.id},'Imekubaliwa')">✔</button>
-          <button class="icon-btn a-reject" title="Kataa" onclick="setStatus(${r.id},'Imekataliwa')">✖</button>
-          ${isSuper() ? `<button class="icon-btn a-delete" title="Futa" onclick="removeRow(${r.id})">🗑</button>` : ''}
+          <button class="act-btn a-approve" onclick="setStatus(${r.id},'Imekubaliwa')">Kubali</button>
+          <button class="act-btn a-reject" onclick="setStatus(${r.id},'Imekataliwa')">Kataa</button>
+          ${isSuper() ? `<button class="act-btn a-delete" onclick="removeRow(${r.id})">Ondoa</button>` : ''}
         </div>
       </td>
     </tr>`).join('');
@@ -387,8 +389,8 @@ async function loadAdmins() {
       <td>${(a.created_at || '').slice(0, 10)}</td>
       <td>
         <div class="row-actions">
-          <button class="btn btn-ghost" style="background:#FEF5DD;color:#94700e;" onclick="resetAdminPw(${a.id}, '${a.username}')">🔑 Weka nenosiri jipya</button>
-          <button class="btn btn-red" onclick="removeAdmin(${a.id}, '${a.username}')">🗑 Ondoa</button>
+          <button class="btn btn-ghost" style="background:#FEF5DD;color:#94700e;" onclick="resetAdminPw(${a.id}, '${a.username}')">Weka nenosiri jipya</button>
+          <button class="btn btn-red" onclick="removeAdmin(${a.id}, '${a.username}')">Ondoa</button>
         </div>
       </td>
     </tr>`).join('');
