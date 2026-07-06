@@ -18,23 +18,29 @@ npm start
 
 To stop the server, press `Ctrl + C` in PowerShell.
 
-## Admin login
+## Admin accounts (two levels)
 
-- The admin password is: `uwat@2026`
-- **IMPORTANT: change it before putting the site online.**
-  Open `server.js` in Notepad, find this line near the top, and change the password:
+**Super admin** — username `superadmin`. The password comes from Render's
+settings (`SUPER_ADMIN_PASSWORD`, or the older `ADMIN_PASSWORD` setting;
+on your own computer it is `uwat@2026`). The super admin can:
+- Everything a normal admin can do (below), plus:
+- Delete registration entries (🗑)
+- Add and remove normal admins (the "Wasimamizi" tab)
+- Reset any admin's password
+- See the activity log (the "Kumbukumbu" tab): who logged in,
+  who approved/rejected/deleted what, and when
 
-```js
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'uwat@2026'; // <-- CHANGE THIS
-```
-
-## What the admin can do
-
-- See every person who registered (with all their details — click a row to see everything)
-- Search by name, phone, region, or park
+**Normal admins** — created by the super admin from the "Wasimamizi" tab.
+Give each leader their own username and starting password. They can:
+- See and search every person who registered (click a row for full details)
 - Approve (✔) or reject (✖) applications
-- Delete (🗑) entries
-- Download everything as an Excel file (the "Pakua Excel (CSV)" button)
+- Download the Excel file
+- Change their own password (the 🔑 button)
+They can NOT delete anything, manage admins, or see the activity log.
+
+If an admin forgets their password, the super admin resets it from the
+"Wasimamizi" tab. If YOU forget the super admin password, change the
+`SUPER_ADMIN_PASSWORD` value in Render → your service → Environment.
 
 ## Where is the data stored?
 

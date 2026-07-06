@@ -3,6 +3,13 @@
 // Runs the website, saves registrations, and serves the admin
 // dashboard. Start it with:  npm start
 //
+// Accounts:
+//  - Super admin: username/password come from settings below
+//    (or Render environment variables). Can manage everything,
+//    including creating/removing normal admins.
+//  - Normal admins: stored in the database, created by the
+//    super admin from the dashboard.
+//
 // Database:
 //  - On your computer: saves to the file uwat.db (automatic)
 //  - Online (Render):  uses the free Neon Postgres database
@@ -12,12 +19,16 @@ const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
 
-// ---------- SETTINGS (change the password here!) ----------
+// ---------- SETTINGS ----------
 const PORT = process.env.PORT || 3000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'uwat@2026'; // <-- CHANGE THIS
+// Super admin username: only lowercase letters, numbers and _ (no dots/spaces)
+const SUPER_USER = (process.env.SUPER_ADMIN_USER || 'superadmin').toLowerCase();
+// Super admin password: set SUPER_ADMIN_PASSWORD on Render (falls back to the
+// older ADMIN_PASSWORD setting so existing deployments keep working)
+const SUPER_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || 'uwat@2026';
 const SECRET = process.env.SECRET || crypto.randomBytes(32).toString('hex');
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'uwat.db');
-// -----------------------------------------------------------
+// ------------------------------
 
 // ---------- Database (works with SQLite locally, Postgres online) ----------
 // query(sql, params) always returns an array of rows.
@@ -36,7 +47,7 @@ if (process.env.DATABASE_URL) {
     const text = sql.replace(/\?/g, () => '$' + (++i));
     return (await pool.query(text, params)).rows;
   };
-  dbReady = query(`
+  dbReady = pool.query(`
     CREATE TABLE IF NOT EXISTS registrations (
       id SERIAL PRIMARY KEY,
       first_name TEXT NOT NULL,
@@ -60,7 +71,19 @@ if (process.env.DATABASE_URL) {
       signature TEXT,
       status TEXT DEFAULT 'Inasubiri',
       created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
-    )
+    );
+    CREATE TABLE IF NOT EXISTS admins (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+    );
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id SERIAL PRIMARY KEY,
+      username TEXT,
+      action TEXT,
+      created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
+    );
   `);
   console.log('Database: online Postgres (Neon)');
 } else {
@@ -95,7 +118,19 @@ if (process.env.DATABASE_URL) {
       signature TEXT,
       status TEXT DEFAULT 'Inasubiri',
       created_at TEXT DEFAULT (datetime('now'))
-    )
+    );
+    CREATE TABLE IF NOT EXISTS admins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT,
+      action TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
   dbReady = Promise.resolve();
   console.log('Database: local file ' + DB_PATH);
@@ -114,29 +149,84 @@ const safe = handler => async (req, res) => {
   }
 };
 
-// ---------- Admin login cookie helpers ----------
-function makeToken() {
-  const expires = Date.now() + 12 * 60 * 60 * 1000; // valid 12 hours
-  const sig = crypto.createHmac('sha256', SECRET).update(String(expires)).digest('hex');
-  return `${expires}.${sig}`;
+// ---------- Password hashing (for normal admins) ----------
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return salt + '$' + hash;
 }
 
-function isLoggedIn(req) {
+function verifyPassword(password, stored) {
+  const [salt, hash] = String(stored || '').split('$');
+  if (!salt || !hash) return false;
+  const test = crypto.scryptSync(password, salt, 64);
+  try { return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), test); }
+  catch { return false; }
+}
+
+function sameText(a, b) {
+  const ha = crypto.createHash('sha256').update(String(a)).digest();
+  const hb = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+
+// ---------- Activity log ----------
+async function logAction(username, action) {
+  try { await query('INSERT INTO activity_log (username, action) VALUES (?, ?)', [username, action]); }
+  catch (err) { console.error('log failed:', err.message); }
+}
+
+// ---------- Login cookie helpers ----------
+// Cookie value: expires.username.role.signature
+function makeToken(username, role) {
+  const expires = Date.now() + 12 * 60 * 60 * 1000; // valid 12 hours
+  const sig = crypto.createHmac('sha256', SECRET)
+    .update(`${expires}|${username}|${role}`).digest('hex');
+  return `${expires}.${username}.${role}.${sig}`;
+}
+
+function readToken(req) {
   const cookie = (req.headers.cookie || '')
     .split(';').map(c => c.trim()).find(c => c.startsWith('uwat_admin='));
-  if (!cookie) return false;
-  const [expires, sig] = cookie.slice('uwat_admin='.length).split('.');
-  if (!expires || !sig || Date.now() > Number(expires)) return false;
-  const expected = crypto.createHmac('sha256', SECRET).update(expires).digest('hex');
+  if (!cookie) return null;
+  const parts = cookie.slice('uwat_admin='.length).split('.');
+  if (parts.length !== 4) return null;
+  const [expires, username, role, sig] = parts;
+  if (Date.now() > Number(expires)) return null;
+  const expected = crypto.createHmac('sha256', SECRET)
+    .update(`${expires}|${username}|${role}`).digest('hex');
   try {
-    return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
-  } catch { return false; }
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  } catch { return null; }
+  return { username, role };
 }
 
-function requireAdmin(req, res, next) {
-  if (!isLoggedIn(req)) return res.status(401).json({ error: 'Haujaingia. Tafadhali ingia kwanza.' });
+function setLoginCookie(res, username, role) {
+  res.setHeader('Set-Cookie',
+    `uwat_admin=${makeToken(username, role)}; HttpOnly; Path=/; Max-Age=${12 * 60 * 60}; SameSite=Lax`);
+}
+
+// Any logged-in admin. Also re-checks that a normal admin still exists,
+// so removed admins lose access immediately.
+async function authAdmin(req, res, next) {
+  const user = readToken(req);
+  if (!user) return res.status(401).json({ error: 'Haujaingia. Tafadhali ingia kwanza.' });
+  if (user.role === 'admin') {
+    const rows = await query('SELECT id FROM admins WHERE username = ?', [user.username]);
+    if (!rows.length) return res.status(401).json({ error: 'Akaunti yako imeondolewa.' });
+  }
+  req.admin = user;
   next();
 }
+
+function authSuper(req, res, next) {
+  if (!req.admin || req.admin.role !== 'super') {
+    return res.status(403).json({ error: 'Huduma hii ni ya msimamizi mkuu pekee.' });
+  }
+  next();
+}
+
+const USERNAME_RULE = /^[a-z0-9_]{3,20}$/;
 
 // ---------- Public: save a registration ----------
 app.post('/api/register', safe(async (req, res) => {
@@ -162,46 +252,71 @@ app.post('/api/register', safe(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// ---------- Admin: login / logout ----------
-app.post('/api/admin/login', (req, res) => {
-  const given = String((req.body || {}).password || '');
-  const a = crypto.createHash('sha256').update(given).digest();
-  const b = crypto.createHash('sha256').update(ADMIN_PASSWORD).digest();
-  if (!crypto.timingSafeEqual(a, b)) {
-    return res.status(401).json({ error: 'Nenosiri si sahihi.' });
+// ---------- Login / logout ----------
+app.post('/api/admin/login', safe(async (req, res) => {
+  const b = req.body || {};
+  const username = String(b.username || '').trim().toLowerCase();
+  const password = String(b.password || '');
+  if (!username || !password) return res.status(400).json({ error: 'Jaza jina la mtumiaji na nenosiri.' });
+
+  // Super admin?
+  if (username === SUPER_USER) {
+    if (!sameText(password, SUPER_PASSWORD)) {
+      return res.status(401).json({ error: 'Jina la mtumiaji au nenosiri si sahihi.' });
+    }
+    setLoginCookie(res, username, 'super');
+    await logAction(username, 'aliingia (msimamizi mkuu)');
+    return res.json({ ok: true, username, role: 'super' });
   }
-  res.setHeader('Set-Cookie', `uwat_admin=${makeToken()}; HttpOnly; Path=/; Max-Age=${12 * 60 * 60}; SameSite=Lax`);
-  res.json({ ok: true });
-});
+
+  // Normal admin?
+  const rows = await query('SELECT * FROM admins WHERE username = ?', [username]);
+  if (!rows.length || !verifyPassword(password, rows[0].password_hash)) {
+    return res.status(401).json({ error: 'Jina la mtumiaji au nenosiri si sahihi.' });
+  }
+  setLoginCookie(res, username, 'admin');
+  await logAction(username, 'aliingia');
+  res.json({ ok: true, username, role: 'admin' });
+}));
 
 app.post('/api/admin/logout', (req, res) => {
   res.setHeader('Set-Cookie', 'uwat_admin=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
   res.json({ ok: true });
 });
 
-app.get('/api/admin/me', (req, res) => res.json({ loggedIn: isLoggedIn(req) }));
+app.get('/api/admin/me', (req, res) => {
+  const user = readToken(req);
+  res.json(user ? { loggedIn: true, username: user.username, role: user.role } : { loggedIn: false });
+});
 
-// ---------- Admin: view / manage registrations ----------
-app.get('/api/admin/registrations', requireAdmin, safe(async (req, res) => {
+// ---------- Registrations (any admin) ----------
+app.get('/api/admin/registrations', authAdmin, safe(async (req, res) => {
   const rows = await query('SELECT * FROM registrations ORDER BY id DESC');
   res.json(rows);
 }));
 
-app.patch('/api/admin/registrations/:id', requireAdmin, safe(async (req, res) => {
+// Approve / reject (any admin)
+app.patch('/api/admin/registrations/:id', authAdmin, safe(async (req, res) => {
   const status = String((req.body || {}).status || '');
   const allowed = ['Inasubiri', 'Imekubaliwa', 'Imekataliwa'];
   if (!allowed.includes(status)) return res.status(400).json({ error: 'Hali si sahihi.' });
-  await query('UPDATE registrations SET status = ? WHERE id = ?', [status, Number(req.params.id)]);
+  const id = Number(req.params.id);
+  await query('UPDATE registrations SET status = ? WHERE id = ?', [status, id]);
+  const verb = status === 'Imekubaliwa' ? 'alikubali' : status === 'Imekataliwa' ? 'alikataa' : 'alirudisha kusubiri';
+  await logAction(req.admin.username, `${verb} ombi #${id}`);
   res.json({ ok: true });
 }));
 
-app.delete('/api/admin/registrations/:id', requireAdmin, safe(async (req, res) => {
-  await query('DELETE FROM registrations WHERE id = ?', [Number(req.params.id)]);
+// Delete (super admin only)
+app.delete('/api/admin/registrations/:id', authAdmin, authSuper, safe(async (req, res) => {
+  const id = Number(req.params.id);
+  await query('DELETE FROM registrations WHERE id = ?', [id]);
+  await logAction(req.admin.username, `alifuta ombi #${id}`);
   res.json({ ok: true });
 }));
 
-// ---------- Admin: export to Excel (CSV) ----------
-app.get('/api/admin/export.csv', requireAdmin, safe(async (req, res) => {
+// ---------- Excel export (any admin) ----------
+app.get('/api/admin/export.csv', authAdmin, safe(async (req, res) => {
   const rows = await query('SELECT * FROM registrations ORDER BY id');
   const headers = ['ID', 'Jina la Kwanza', 'Jina la Kati', 'Jina la Ukoo', 'Jinsia', 'Simu', 'Makazi',
     'Barua Pepe', 'Namba ya Nyumba', 'Kijiji/Mtaa/Wilaya', 'Mkoa', 'Jina la Mwenza', 'Makazi ya Mwenza',
@@ -215,10 +330,75 @@ app.get('/api/admin/export.csv', requireAdmin, safe(async (req, res) => {
       r.spouse_phone, r.heir_name, r.heir_residence, r.heir_phone, r.last_park,
       r.retire_date, r.signature, r.status, r.created_at].map(esc).join(','));
   }
+  await logAction(req.admin.username, 'alipakua orodha ya usajili (Excel)');
   // The ﻿ marker (BOM) makes Excel open Swahili characters correctly
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="usajili-uwat.csv"');
   res.send('﻿' + lines.join('\r\n'));
+}));
+
+// ---------- Change own password (normal admins) ----------
+app.post('/api/admin/password', authAdmin, safe(async (req, res) => {
+  if (req.admin.role === 'super') {
+    return res.status(400).json({ error: 'Nenosiri la msimamizi mkuu linabadilishwa kwenye mipangilio ya Render (SUPER_ADMIN_PASSWORD).' });
+  }
+  const b = req.body || {};
+  const oldPw = String(b.old_password || '');
+  const newPw = String(b.new_password || '');
+  if (newPw.length < 6) return res.status(400).json({ error: 'Nenosiri jipya liwe na angalau herufi 6.' });
+  const rows = await query('SELECT * FROM admins WHERE username = ?', [req.admin.username]);
+  if (!rows.length || !verifyPassword(oldPw, rows[0].password_hash)) {
+    return res.status(401).json({ error: 'Nenosiri la zamani si sahihi.' });
+  }
+  await query('UPDATE admins SET password_hash = ? WHERE username = ?', [hashPassword(newPw), req.admin.username]);
+  await logAction(req.admin.username, 'alibadilisha nenosiri lake');
+  res.json({ ok: true });
+}));
+
+// ---------- Manage admins (super admin only) ----------
+app.get('/api/admin/admins', authAdmin, authSuper, safe(async (req, res) => {
+  const rows = await query('SELECT id, username, created_at FROM admins ORDER BY id');
+  res.json(rows);
+}));
+
+app.post('/api/admin/admins', authAdmin, authSuper, safe(async (req, res) => {
+  const b = req.body || {};
+  const username = String(b.username || '').trim().toLowerCase();
+  const password = String(b.password || '');
+  if (!USERNAME_RULE.test(username)) {
+    return res.status(400).json({ error: 'Jina la mtumiaji liwe herufi ndogo 3–20 (a-z, 0-9, _), bila nafasi.' });
+  }
+  if (username === SUPER_USER) return res.status(400).json({ error: 'Jina hilo limehifadhiwa.' });
+  if (password.length < 6) return res.status(400).json({ error: 'Nenosiri liwe na angalau herufi 6.' });
+  const exists = await query('SELECT id FROM admins WHERE username = ?', [username]);
+  if (exists.length) return res.status(400).json({ error: 'Jina hilo la mtumiaji tayari lipo.' });
+  await query('INSERT INTO admins (username, password_hash) VALUES (?, ?)', [username, hashPassword(password)]);
+  await logAction(req.admin.username, `aliongeza msimamizi '${username}'`);
+  res.json({ ok: true });
+}));
+
+app.post('/api/admin/admins/:id/reset', authAdmin, authSuper, safe(async (req, res) => {
+  const password = String((req.body || {}).password || '');
+  if (password.length < 6) return res.status(400).json({ error: 'Nenosiri liwe na angalau herufi 6.' });
+  const rows = await query('SELECT username FROM admins WHERE id = ?', [Number(req.params.id)]);
+  if (!rows.length) return res.status(404).json({ error: 'Msimamizi hajapatikana.' });
+  await query('UPDATE admins SET password_hash = ? WHERE id = ?', [hashPassword(password), Number(req.params.id)]);
+  await logAction(req.admin.username, `alibadilisha nenosiri la '${rows[0].username}'`);
+  res.json({ ok: true });
+}));
+
+app.delete('/api/admin/admins/:id', authAdmin, authSuper, safe(async (req, res) => {
+  const rows = await query('SELECT username FROM admins WHERE id = ?', [Number(req.params.id)]);
+  if (!rows.length) return res.status(404).json({ error: 'Msimamizi hajapatikana.' });
+  await query('DELETE FROM admins WHERE id = ?', [Number(req.params.id)]);
+  await logAction(req.admin.username, `aliondoa msimamizi '${rows[0].username}'`);
+  res.json({ ok: true });
+}));
+
+// ---------- Activity log (super admin only) ----------
+app.get('/api/admin/logs', authAdmin, authSuper, safe(async (req, res) => {
+  const rows = await query('SELECT * FROM activity_log ORDER BY id DESC LIMIT 300');
+  res.json(rows);
 }));
 
 // ---------- Admin page ----------
@@ -228,6 +408,7 @@ dbReady.then(() => {
   app.listen(PORT, () => {
     console.log(`UWAT website running at http://localhost:${PORT}`);
     console.log(`Admin dashboard:        http://localhost:${PORT}/admin`);
+    console.log(`Super admin username:   ${SUPER_USER}`);
   });
 }).catch(err => {
   console.error('Database connection failed:', err.message);
