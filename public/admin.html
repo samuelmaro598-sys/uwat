@@ -108,9 +108,11 @@
     <h1>UWAT Admin</h1>
     <p>Ingia kuona maombi ya usajili</p>
     <div class="login-error" id="loginError">Jina la mtumiaji au nenosiri si sahihi.</div>
-    <input type="text" id="usernameInput" placeholder="Jina la mtumiaji" autocomplete="username" onkeydown="if(event.key==='Enter')login()">
-    <input type="password" id="passwordInput" placeholder="Nenosiri" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
-    <button onclick="login()">Ingia →</button>
+    <form onsubmit="event.preventDefault(); login();">
+      <input type="text" id="usernameInput" placeholder="Jina la mtumiaji" autocomplete="username">
+      <input type="password" id="passwordInput" placeholder="Nenosiri" autocomplete="current-password">
+      <button type="submit" id="loginBtn">Ingia →</button>
+    </form>
   </div>
 </div>
 
@@ -249,17 +251,33 @@ async function checkAuth() {
 async function login() {
   const username = document.getElementById('usernameInput').value.trim();
   const password = document.getElementById('passwordInput').value;
-  const r = await fetch('/api/admin/login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
-  const j = await r.json();
-  if (r.ok) { me = j; document.getElementById('loginError').style.display = 'none'; showDash(); }
-  else {
-    const err = document.getElementById('loginError');
-    err.textContent = j.error || 'Jina la mtumiaji au nenosiri si sahihi.';
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  err.style.display = 'none';
+  if (!username || !password) {
+    err.textContent = 'Jaza jina la mtumiaji na nenosiri.';
+    err.style.display = 'block';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Inaingia... (subiri, tovuti inaweza kuchukua dakika kuamka)';
+  try {
+    const r = await fetch('/api/admin/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const j = await r.json();
+    if (r.ok) { me = j; showDash(); }
+    else {
+      err.textContent = j.error || 'Jina la mtumiaji au nenosiri si sahihi.';
+      err.style.display = 'block';
+    }
+  } catch (e) {
+    err.textContent = 'Imeshindikana kuunganisha na seva. Hakikisha uko kwenye tovuti (uwat.onrender.com) na mtandao upo, kisha jaribu tena.';
     err.style.display = 'block';
   }
+  btn.disabled = false;
+  btn.textContent = 'Ingia →';
 }
 async function logout() {
   await fetch('/api/admin/logout', { method: 'POST' });

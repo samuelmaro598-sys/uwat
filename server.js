@@ -47,7 +47,10 @@ if (process.env.DATABASE_URL) {
     const text = sql.replace(/\?/g, () => '$' + (++i));
     return (await pool.query(text, params)).rows;
   };
-  dbReady = pool.query(`
+  // Tables are created one by one — Neon's connection pooler
+  // does not accept several commands in a single query.
+  dbReady = (async () => {
+    await pool.query(`
     CREATE TABLE IF NOT EXISTS registrations (
       id SERIAL PRIMARY KEY,
       first_name TEXT NOT NULL,
@@ -71,20 +74,22 @@ if (process.env.DATABASE_URL) {
       signature TEXT,
       status TEXT DEFAULT 'Inasubiri',
       created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
-    );
+    )`);
+    await pool.query(`
     CREATE TABLE IF NOT EXISTS admins (
       id SERIAL PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
-    );
+    )`);
+    await pool.query(`
     CREATE TABLE IF NOT EXISTS activity_log (
       id SERIAL PRIMARY KEY,
       username TEXT,
       action TEXT,
       created_at TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
-    );
-  `);
+    )`);
+  })();
   console.log('Database: online Postgres (Neon)');
 } else {
   // ----- Local: SQLite file -----
