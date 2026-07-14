@@ -4,20 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UWAT Admin — Usajili</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --forest: #1B4332; --forest-dark: #0f2b1f; --gold: #C9A227; --gold-light: #E3C866;
     --cream: #FAF7F0; --muted: #5c6b62; --red: #C0392B; --green: #2D7A4F;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1a1a1a; min-height: 100vh; }
+  body { font-family: 'Inter', sans-serif; background: var(--cream); color: #1a1a1a; min-height: 100vh; }
 
   /* ---------- LOGIN ---------- */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, var(--forest-dark), var(--forest)); padding: 1rem; }
   .login-card { background: white; border-radius: 16px; padding: 2.5rem 2rem; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
   .login-card img { width: 72px; height: 72px; object-fit: contain; margin-bottom: 1rem; }
-  .login-card h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.7rem; color: var(--forest); margin-bottom: 0.25rem; }
+  .login-card h1 { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.02em; font-size: 1.7rem; color: var(--forest); margin-bottom: 0.25rem; }
   .login-card p { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
   .login-card input { width: 100%; padding: 0.85rem 1rem; border: 1.5px solid #ddd; border-radius: 10px; font-size: 0.95rem; font-family: inherit; margin-bottom: 1rem; }
   .login-card input:focus { outline: none; border-color: var(--gold); }
@@ -30,7 +30,7 @@
   header { background: var(--forest); color: white; padding: 0.9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
   .brand { display: flex; align-items: center; gap: 0.7rem; }
   .brand img { width: 42px; height: 42px; object-fit: contain; }
-  .brand h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; }
+  .brand h1 { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.02em; font-size: 1.3rem; }
   .brand span { font-size: 0.72rem; opacity: 0.75; display: block; }
   .whoami { font-size: 0.78rem; background: rgba(255,255,255,0.12); padding: 0.35rem 0.8rem; border-radius: 100px; }
   .whoami b { color: var(--gold-light); }
@@ -59,6 +59,9 @@
   .table-wrap { max-width: 1200px; margin: 0.5rem auto 2.5rem; padding: 0 1.5rem; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); font-size: 0.85rem; }
   th { background: var(--forest); color: white; text-align: left; padding: 0.75rem 0.9rem; font-weight: 600; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { background: #24573f; }
+  th .arrow { display: inline-block; margin-left: 5px; font-size: 0.65rem; color: var(--gold-light); }
   td { padding: 0.7rem 0.9rem; border-bottom: 1px solid #f0ede4; vertical-align: middle; }
   tbody tr:hover { background: #faf6ea; }
   .clickable tbody tr { cursor: pointer; }
@@ -77,7 +80,7 @@
 
   .panel { max-width: 1200px; margin: 1rem auto; padding: 0 1.5rem; }
   .card-box { background: white; border-radius: 12px; padding: 1.4rem; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 1.2rem; }
-  .card-box h3 { font-family: 'Cormorant Garamond', serif; color: var(--forest); font-size: 1.3rem; margin-bottom: 0.9rem; }
+  .card-box h3 { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.02em; color: var(--forest); font-size: 1.3rem; margin-bottom: 0.9rem; }
   .inline-form { display: flex; gap: 0.7rem; flex-wrap: wrap; }
   .inline-form input { padding: 0.65rem 0.9rem; border: 1.5px solid #ddd; border-radius: 9px; font-size: 0.87rem; font-family: inherit; flex: 1; min-width: 180px; }
   .inline-form input:focus { outline: none; border-color: var(--gold); }
@@ -87,7 +90,7 @@
   .overlay { position: fixed; inset: 0; background: rgba(15,43,31,0.55); display: none; align-items: center; justify-content: center; padding: 1rem; z-index: 100; }
   .overlay.open { display: flex; }
   .modal { background: white; border-radius: 16px; max-width: 640px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 1.75rem; }
-  .modal h2 { font-family: 'Cormorant Garamond', serif; color: var(--forest); font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .modal h2 { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.02em; color: var(--forest); font-size: 1.5rem; margin-bottom: 0.25rem; }
   .modal .sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.25rem; }
   .modal input { width: 100%; padding: 0.75rem 0.9rem; border: 1.5px solid #ddd; border-radius: 9px; font-size: 0.9rem; font-family: inherit; margin-bottom: 0.8rem; }
   .modal input:focus { outline: none; border-color: var(--gold); }
@@ -130,7 +133,7 @@
     </div>
     <div class="head-actions">
       <span class="whoami" id="whoami"></span>
-      <button class="btn btn-gold" onclick="window.location='/api/admin/export.csv'">⬇ Pakua Excel</button>
+      <button class="btn btn-gold" onclick="window.location='/api/admin/export.pdf'">⬇ Pakua PDF</button>
       <button class="btn btn-ghost" id="pwBtn" onclick="openPwModal()" style="display:none;">🔑 Badilisha Nenosiri</button>
       <button class="btn btn-ghost" onclick="refreshAll()">↻ Onyesha Upya</button>
       <button class="btn btn-ghost" onclick="logout()">Toka</button>
@@ -167,8 +170,16 @@
       <table class="clickable">
         <thead>
           <tr>
-            <th style="text-transform:none;">Na.</th><th>Jina Kamili</th><th>Jinsia</th><th>Simu</th><th>Mkoa</th>
-            <th>Hifadhi</th><th>Kustaafu</th><th>Tarehe ya Ombi</th><th>Hali</th><th>Vitendo</th>
+            <th style="text-transform:none;" class="sortable" onclick="sortBy('id')">Na.<span class="arrow" id="ar-id"></span></th>
+            <th class="sortable" onclick="sortBy('name')">Jina Kamili<span class="arrow" id="ar-name"></span></th>
+            <th class="sortable" onclick="sortBy('gender')">Jinsia<span class="arrow" id="ar-gender"></span></th>
+            <th class="sortable" onclick="sortBy('phone')">Simu<span class="arrow" id="ar-phone"></span></th>
+            <th class="sortable" onclick="sortBy('region')">Mkoa<span class="arrow" id="ar-region"></span></th>
+            <th class="sortable" onclick="sortBy('last_park')">Hifadhi<span class="arrow" id="ar-last_park"></span></th>
+            <th class="sortable" onclick="sortBy('retire_date')">Kustaafu<span class="arrow" id="ar-retire_date"></span></th>
+            <th class="sortable" onclick="sortBy('created_at')">Tarehe ya Ombi<span class="arrow" id="ar-created_at"></span></th>
+            <th class="sortable" onclick="sortBy('status')">Hali<span class="arrow" id="ar-status"></span></th>
+            <th>Vitendo</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -322,6 +333,21 @@ function badge(status) {
   return `<span class="badge ${cls}">${status}</span>`;
 }
 
+// ---------- column sorting ----------
+let sortKey = 'id', sortDir = -1; // newest first by default
+
+function sortBy(key) {
+  if (sortKey === key) sortDir = -sortDir;
+  else { sortKey = key; sortDir = 1; }
+  render();
+}
+
+function sortValue(r, key) {
+  if (key === 'name') return fullName(r).toLowerCase();
+  if (key === 'id') return r.id;
+  return String(r[key] || '').toLowerCase();
+}
+
 function render() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   const st = document.getElementById('statusFilter').value;
@@ -331,6 +357,17 @@ function render() {
     return [fullName(r), r.phone, r.region, r.district, r.last_park, r.email]
       .join(' ').toLowerCase().includes(q);
   });
+
+  rows.sort((a, b) => {
+    const va = sortValue(a, sortKey), vb = sortValue(b, sortKey);
+    if (va < vb) return -1 * sortDir;
+    if (va > vb) return 1 * sortDir;
+    return 0;
+  });
+
+  document.querySelectorAll('.arrow').forEach(el => el.textContent = '');
+  const ar = document.getElementById('ar-' + sortKey);
+  if (ar) ar.textContent = sortDir === 1 ? '▲' : '▼';
 
   document.getElementById('stTotal').textContent = allRows.length;
   document.getElementById('stPending').textContent = allRows.filter(r => r.status === 'Inasubiri').length;
@@ -512,6 +549,30 @@ function openDetail(id) {
   document.getElementById('detailOverlay').classList.add('open');
 }
 function closeDetail() { document.getElementById('detailOverlay').classList.remove('open'); }
+
+// ---------- 30-minute inactivity logout ----------
+const SESSION_MS = 30 * 60 * 1000;
+let lastActivity = Date.now();
+['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'].forEach(ev =>
+  document.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true }));
+
+// Every minute: if 30 minutes passed without activity, log out.
+setInterval(async () => {
+  if (!me.username) return;
+  if (Date.now() - lastActivity >= SESSION_MS) {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    alert('Umetoka kwenye mfumo kwa sababu ya kutokuwa na shughuli kwa dakika 30. Tafadhali ingia tena.');
+    location.reload();
+  }
+}, 60 * 1000);
+
+// Every 5 minutes: if the admin is active, quietly extend the session
+// on the server so it never expires while they are working.
+setInterval(() => {
+  if (me.username && Date.now() - lastActivity < 5 * 60 * 1000) {
+    fetch('/api/admin/me').catch(() => { });
+  }
+}, 5 * 60 * 1000);
 
 checkAuth();
 </script>

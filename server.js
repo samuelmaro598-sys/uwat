@@ -18,6 +18,7 @@
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
+const PDFDocument = require('pdfkit');
 
 // ---------- SETTINGS ----------
 const PORT = process.env.PORT || 3000;
@@ -182,9 +183,13 @@ async function logAction(username, action) {
 }
 
 // ---------- Login cookie helpers ----------
+// Session lasts 30 minutes without activity. Every authenticated
+// request refreshes it ("sliding" session), so active admins stay in.
+const SESSION_MINUTES = 30;
+
 // Cookie value: expires.username.role.signature
 function makeToken(username, role) {
-  const expires = Date.now() + 12 * 60 * 60 * 1000; // valid 12 hours
+  const expires = Date.now() + SESSION_MINUTES * 60 * 1000;
   const sig = crypto.createHmac('sha256', SECRET)
     .update(`${expires}|${username}|${role}`).digest('hex');
   return `${expires}.${username}.${role}.${sig}`;
@@ -208,7 +213,7 @@ function readToken(req) {
 
 function setLoginCookie(res, username, role) {
   res.setHeader('Set-Cookie',
-    `uwat_admin=${makeToken(username, role)}; HttpOnly; Path=/; Max-Age=${12 * 60 * 60}; SameSite=Lax`);
+    `uwat_admin=${makeToken(username, role)}; HttpOnly; Path=/; Max-Age=${SESSION_MINUTES * 60}; SameSite=Lax`);
 }
 
 // Any logged-in admin. Also re-checks that a normal admin still exists,
@@ -221,6 +226,7 @@ async function authAdmin(req, res, next) {
     if (!rows.length) return res.status(401).json({ error: 'Akaunti yako imeondolewa.' });
   }
   req.admin = user;
+  setLoginCookie(res, user.username, user.role); // refresh the 30-minute session
   next();
 }
 
@@ -291,6 +297,7 @@ app.post('/api/admin/logout', (req, res) => {
 
 app.get('/api/admin/me', (req, res) => {
   const user = readToken(req);
+  if (user) setLoginCookie(res, user.username, user.role); // refresh the 30-minute session
   res.json(user ? { loggedIn: true, username: user.username, role: user.role } : { loggedIn: false });
 });
 
@@ -320,26 +327,96 @@ app.delete('/api/admin/registrations/:id', authAdmin, authSuper, safe(async (req
   res.json({ ok: true });
 }));
 
-// ---------- Excel export (any admin) ----------
-app.get('/api/admin/export.csv', authAdmin, safe(async (req, res) => {
+// ---------- PDF report (any admin) ----------
+app.get('/api/admin/export.pdf', authAdmin, safe(async (req, res) => {
   const rows = await query('SELECT * FROM registrations ORDER BY id');
-  const headers = ['ID', 'Jina la Kwanza', 'Jina la Kati', 'Jina la Ukoo', 'Jinsia', 'Simu', 'Makazi',
-    'Barua Pepe', 'Namba ya Nyumba', 'Kijiji/Mtaa/Wilaya', 'Mkoa', 'Jina la Mwenza', 'Makazi ya Mwenza',
-    'Simu ya Mwenza', 'Jina la Mrithi', 'Makazi ya Mrithi', 'Simu ya Mrithi', 'Hifadhi ya Mwisho',
-    'Tarehe ya Kustaafu', 'Saini', 'Hali', 'Tarehe ya Maombi'];
-  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [headers.map(esc).join(',')];
-  for (const r of rows) {
-    lines.push([r.id, r.first_name, r.middle_name, r.last_name, r.gender, r.phone, r.residence,
-      r.email, r.house_no, r.district, r.region, r.spouse_name, r.spouse_residence,
-      r.spouse_phone, r.heir_name, r.heir_residence, r.heir_phone, r.last_park,
-      r.retire_date, r.signature, r.status, r.created_at].map(esc).join(','));
+  await logAction(req.admin.username, 'alipakua ripoti ya usajili (PDF)');
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="usajili-uwat.pdf"');
+
+  const FOREST = '#1B4332', GOLD = '#C9A227', DARK = '#222222', MUTED = '#5c6b62';
+  const PW = 841.89, PH = 595.28; // A4 landscape
+  const M2 = 40;
+  const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: M2, bufferPages: true });
+  doc.pipe(res);
+
+  const logoPath = path.join(__dirname, 'public', 'images', 'uwat logo.png');
+  const cols = [
+    { key: 'na',     label: 'Na.',              w: 34 },
+    { key: 'name',   label: 'Jina Kamili',      w: 150 },
+    { key: 'gender', label: 'Jinsia',           w: 42 },
+    { key: 'phone',  label: 'Simu',             w: 95 },
+    { key: 'region', label: 'Mkoa',             w: 95 },
+    { key: 'park',   label: 'Hifadhi',          w: 85 },
+    { key: 'retire', label: 'Kustaafu',         w: 80 },
+    { key: 'status', label: 'Hali',             w: 80 },
+    { key: 'date',   label: 'Tarehe ya Ombi',   w: 92 },
+  ];
+  const tableW = cols.reduce((s, c) => s + c.w, 0);
+  const startX = M2;
+  const rowH = 22;
+
+  function pageHeader() {
+    try { doc.image(logoPath, M2, 24, { width: 42 }); } catch (e) { }
+    doc.fillColor(FOREST).font('Helvetica-Bold').fontSize(15);
+    doc.text('UWAT — Orodha ya Usajili wa Wanachama', M2 + 54, 28, { lineBreak: false });
+    doc.fillColor(MUTED).font('Helvetica').fontSize(8.5);
+    const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    doc.text(`Imetolewa: ${now}  ·  Jumla ya maombi: ${rows.length}  ·  uwat.onrender.com`, M2 + 54, 47, { lineBreak: false });
+    doc.rect(0, 70, PW, 3).fill(GOLD);
+    doc.y = 84;
   }
-  await logAction(req.admin.username, 'alipakua orodha ya usajili (Excel)');
-  // The ﻿ marker (BOM) makes Excel open Swahili characters correctly
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="usajili-uwat.csv"');
-  res.send('﻿' + lines.join('\r\n'));
+
+  function tableHead(y) {
+    let x = startX;
+    doc.rect(startX, y, tableW, rowH).fill(FOREST);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8.5);
+    for (const c of cols) {
+      doc.text(c.label, x + 5, y + 7, { width: c.w - 10, lineBreak: false });
+      x += c.w;
+    }
+    return y + rowH;
+  }
+
+  pageHeader();
+  let y = tableHead(doc.y);
+  rows.forEach((r, i) => {
+    if (y + rowH > PH - 46) { // new page
+      doc.addPage();
+      pageHeader();
+      y = tableHead(doc.y);
+    }
+    doc.rect(startX, y, tableW, rowH).fill(i % 2 === 0 ? '#ffffff' : '#F4F1E8');
+    const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ');
+    const vals = {
+      na: String(i + 1), name, gender: r.gender || '-', phone: r.phone || '-',
+      region: r.region || '-', park: r.last_park || '-', retire: r.retire_date || '-',
+      status: r.status || '-', date: (r.created_at || '').slice(0, 10)
+    };
+    let x = startX;
+    for (const c of cols) {
+      if (c.key === 'status') {
+        doc.fillColor(vals.status === 'Imekubaliwa' ? '#2D7A4F' : vals.status === 'Imekataliwa' ? '#C0392B' : '#94700e');
+        doc.font('Helvetica-Bold');
+      } else {
+        doc.fillColor(DARK).font('Helvetica');
+      }
+      doc.fontSize(8.5);
+      doc.text(vals[c.key], x + 5, y + 7, { width: c.w - 10, height: rowH - 8, ellipsis: true, lineBreak: false });
+      x += c.w;
+    }
+    y += rowH;
+  });
+  // page numbers
+  const range = doc.bufferedPageRange();
+  for (let i = range.start; i < range.start + range.count; i++) {
+    doc.switchToPage(i);
+    doc.fillColor(MUTED).font('Helvetica').fontSize(8);
+    doc.text(`Ukurasa ${i + 1} kati ya ${range.count}`, PW - M2 - 120, PH - 30, { width: 120, align: 'right', lineBreak: false });
+    doc.text('Tunza Urithi, Enzi Utumishi', M2, PH - 30, { lineBreak: false });
+  }
+  doc.end();
 }));
 
 // ---------- Change own password (normal admins) ----------
